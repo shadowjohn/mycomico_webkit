@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <title> Comico 漫畫下載機 </title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf8">
+  <script language="javascript" src="javascript/jquery/jquery-1.8.3.min.js"></script>
+  <script src="javascript/jquery/mybox.js" type="text/javascript"></script>  
+  <script src="javascript/php/php.js" type="text/javascript"></script>
+  <script src="javascript/include.js" type="text/javascript"></script>
+<script language="javascript">
+child_process = require('child_process');
+request = require('request');
+var fs = require('fs');
+var download = function(uri, filename, callback){
+  request.head(uri, function(err, res, body){
+    console.log('content-type:', res.headers['content-type']);
+    console.log('content-length:', res.headers['content-length']);
+    request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+  });
+};
+window['spawn'] = child_process.spawn;
+window['wh']=getWindowSize();
+$(document).ready(function(){
+  $("#iframe").css({
+    'width':window['wh']['width']+'px',
+    'height':(window['wh']['height']-50)+'px'
+  });
+  $("#reloadBtn").unbind("click").click(function(){
+    location.replace("?");
+  });
+  $("#iframe").bind("load",function(){
+    //$("iframe")[0].contentWindow.location.href
+    //"https://www.comico.com.tw/3745/1/"
+    $("#downloadBtnAll").prop("disabled",true);
+    $("#downloadBtn").prop("disabled",true);
+    var real_href = $(this)[0].contentWindow.location.href;
+    //if(is_string_like(real_href,"https://www.comico.com.tw/%/%")
+    var check_href = real_href.replace("https://www.comico.com.tw/","");
+    var m = explode("/",check_href);
+    if(m.length<2)
+    {      
+      return;      
+    }    
+    if(m.length==2)
+    {
+      $("#downloadBtnAll").prop("disabled",false);      
+      return;      
+    }
+    if( (isNaN(m[0])&&isNaN(m[1])) || m[1]=="")
+    {
+      return;
+    }    
+    $("#downloadBtn").prop("disabled",false);    
+  });
+  $("#downloadBtnAll").unbind("click").click(function(){
+    //整部下載
+    var real_href = $("iframe")[0].contentWindow.location.href;    
+    var check_href = real_href.replace("https://www.comico.com.tw/","");    
+    if(!is_string_like(check_href,"%/"))
+    {
+      alert('請先回到目錄頁...');
+      return;
+    }
+    var allA = $("iframe").contents().find("._articleList a");    
+    dialogOn("下載開始...<span id='sPage'>1</span> / <span id='ePage'>"+allA.length+"</span><br><br><input type='button' id='Cdialog' value='關閉'>",function(){
+      $("#Cdialog").unbind("click").click(function(){
+        dialogOff();
+      });
+      for(var i=0;i<allA.length;i++)
+      {
+        (function (x,A) {                    
+          setTimeout(function () {
+            //更新 dialogOn 內容
+            $("#sPage").text((x+1)); 
+            $("iframe").attr('src',A.eq(x).attr('href'));
+            setTimeout(function(){
+              //等五秒後，按下單回下載扭
+              $("#downloadBtn").trigger("click");              
+            },5000);             
+          }, 10*1000*x); //每頁抓 10 秒
+        })(i,allA);        
+      }  
+    });
+  });
+  $("#downloadBtn").unbind("click").click(function(){
+    //單回下載
+    var real_href = $("iframe")[0].contentWindow.location.href;
+    var check_href = real_href.replace("https://www.comico.com.tw/","");
+    var m = explode("/",check_href);
+    var output = new Object();
+    output["標題"] = trim(str_replace(" ","",explode("|",$("iframe").contents().find("title").text())[0]));
+    output["回"] = trim(str_replace(" ","",explode("|",$("iframe").contents().find("title").text())[1]));
+    var imgs = $("iframe").contents().find(".comic-image__image");
+    output["圖片數量"] = imgs.length;
+    //fs.mkdirSync("..\\DOWNLOAD\\"+output["標題"]);
+    var op = "..\\DOWNLOAD\\"+output["標題"]+"\\"+output["回"];
+    if(!fs.existsSync(op))
+    {
+      fs.mkdirSync(op,{'recursive':true});
+    }
+    for(var i=0;i<imgs.length;i++)
+    {
+      download(imgs.eq(i).attr('src'), op+"\\"+i+".png", function(){
+        console.log('done');
+        smallComment("下載好了",5000,{});
+      });     
+    }    
+  });
+});
+</script>
+</head>
+<body>
+<div align="right">
+  <button id="downloadBtnAll" disabled>整部下載</button>
+  <button id="downloadBtn" disabled>單回下載</button>  
+  <button id="reloadBtn">Reload</button>
+</div>
+<iframe src="https://www.comico.com.tw/" id="iframe"></iframe>
+</body>
+</html>
