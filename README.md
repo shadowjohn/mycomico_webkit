@@ -3,7 +3,7 @@ mycomico_webkit
 <h2>用 Node-webkit 開發的 Comico 漫畫下載機</h2>
 ------------------------------------------------------<br>
 <div align="center">
-  <img src="snapshot/snapshot1.png">
+  <img src="snapshot/comico_downloader.gif">
   <br>
   執行畫面
 </div>
